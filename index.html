@@ -272,6 +272,13 @@ select{border:1.5px solid var(--line);border-radius:9px;padding:7px 10px;font-si
 #growthWrap h4.gr-sec{font-size:14.5px;font-weight:800;color:#ffd27a;margin:18px 0 10px}
 #growthWrap .gr-chart{background:#22345c;border-radius:13px;padding:16px 18px}
 #growthWrap .gr-cbox{position:relative;width:100%;height:340px}
+#growthWrap .gr-2col{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+@media(max-width:920px){#growthWrap .gr-2col{grid-template-columns:1fr}}
+#growthWrap .gr-donut{display:flex;flex-direction:column}
+#growthWrap .gr-dtitle{font-size:13.5px;font-weight:800;color:#eaf1ff;margin-bottom:8px}
+#growthWrap .gr-dbox{position:relative;width:100%;height:280px}
+#growthWrap .gr-dnote{font-size:11.5px;color:#9fb4dc;margin-top:10px;line-height:1.6}
+#growthWrap table.gr-weak td:nth-child(-n+5),#growthWrap table.gr-weak th:nth-child(-n+5){text-align:left}
 #growthWrap .gr-wrap{overflow-x:auto;border-radius:12px}
 #growthWrap table.gr-tb{width:100%;border-collapse:separate;border-spacing:0;background:#22345c;border-radius:12px;font-size:13px}
 #growthWrap table.gr-tb th,#growthWrap table.gr-tb td{padding:10px 12px;text-align:right;border-bottom:1px solid #2f4770;white-space:nowrap;color:#e8eefc}
@@ -422,6 +429,7 @@ select{border:1.5px solid var(--line);border-radius:9px;padding:7px 10px;font-si
 #fundWrap table.fu-sh tr.sh-kd td:first-child{background:#0b2536}
 #fundWrap table.fu-sh tbody tr:hover td{background:#1a4d67 !important}
 #fundWrap table.fu-sh tr.sh-tot td{background:#0a2230;font-weight:800;border-top:2px solid #3f7f96;border-bottom:none}
+#fundWrap table.fu-dc tr.fu-dcbad td:first-child{box-shadow:inset 3px 0 0 #ef4444}
 @media(max-width:640px){
   #fundWrap table.fu-sh th,#fundWrap table.fu-sh td{padding:6px 7px;font-size:11.5px}
   #fundWrap table.fu-sh tr td:first-child,#fundWrap table.fu-sh tr td[style*="padding-left"]{padding-left:6px !important}
@@ -596,7 +604,7 @@ tbody tr.clk{cursor:pointer} tbody tr.clk:hover{background:#eff6ff}
  <div id="fuApp"></div>
 </div>
 <div id="tmWrap" style="display:none"><div id="tmApp"></div></div>
-<div class="foot">Dashboard tự-chứa · Chart.js offline · Dữ liệu 08/2026 · Tạo lúc 29/08/2026 02:20</div>
+<div class="foot">Dashboard tự-chứa · Chart.js offline · Dữ liệu 08/2026 · Tạo lúc 29/08/2026 06:53</div>
 <div class="modal-bg" id="s360" onclick="if(event.target===this)closeShop360()"><div class="modal"><div class="modal-head"><h2 id="s360-title"></h2><div class="x" onclick="closeShop360()">✕</div></div><div class="modal-body" id="s360-body"></div></div></div>
 </div>
 
@@ -2125,14 +2133,54 @@ function grRender(){
     ${grCard('SO tháng 8',grTy(t.so)+' tỷ','đến '+GY.datadate)}
     ${grCard('Run-rate 3 tháng',grTy(t.rr3)+' tỷ','BQ/tháng gần đây')}
     ${grCard('Run-rate 6 tháng',grTy(t.rr6)+' tỷ','BQ/tháng 6T')}</div>`;
+  const isAll=gyCat==='Toàn ngành';
+  const chartBlock = isAll
+    ? '<div class="gr-2col"><div class="gr-chart"><div class="gr-cbox"><canvas id="grCanvas"></canvas></div></div>'
+      +'<div class="gr-chart gr-donut"><div class="gr-dtitle">🍩 % đóng góp tăng trưởng theo ngành hàng</div><div class="gr-dbox"><canvas id="grDonut"></canvas></div><div id="grDonutNote" class="gr-dnote"></div></div></div>'
+    : '<div class="gr-chart"><div class="gr-cbox"><canvas id="grCanvas"></canvas></div></div>';
   document.getElementById('grApp').innerHTML=grChips()+cards
     +'<h4 class="gr-sec">SO YTD năm nay vs cùng kỳ năm trước — theo NPP <span style="font-weight:400;color:#9fb4dc">· ngành: '+gyCat+'</span></h4>'
-    +'<div class="gr-chart"><div class="gr-cbox"><canvas id="grCanvas"></canvas></div></div>'
+    +chartBlock
     +'<h4 class="gr-sec">Bảng chi tiết: Tỉnh → NPP → SS → Phường/xã <span style="font-weight:400;color:#9fb4dc">(bấm 1 dòng để mở/thu; chỉ hiện phường/xã có SO tháng 8)</span></h4>'
     +'<div id="grTree"></div>'
-    +'<div class="gr-foot">SO tháng 8 = doanh số tháng hiện tại đến '+GY.datadate+' · SO YTD = lũy kế từ đầu năm · SO YTD LY = cùng kỳ năm trước · %Tăng trưởng = (YTD−LY)/LY. Run-rate (RR) = BQ doanh số/tháng gần đây. %T8/RR = SO tháng 8 ÷ run-rate (tiến độ tháng). Chỉ liệt kê phường/xã SS đang có phát sinh SO tháng 8. Số cập nhật mỗi ngày.</div>';
+    +'<h4 class="gr-sec">⚠️ Tracking — Phường/xã tăng trưởng ÂM nặng nhất <span style="font-weight:400;color:#9fb4dc">· ngành: '+gyCat+' · xếp %tăng trưởng thấp→cao (YTD vs cùng kỳ)</span></h4>'
+    +'<div id="grWeak"></div>'
+    +'<div class="gr-foot">SO tháng 8 = doanh số tháng hiện tại đến '+GY.datadate+' · SO YTD = lũy kế từ đầu năm · SO YTD LY = cùng kỳ năm trước · %Tăng trưởng = (YTD−LY)/LY. Run-rate (RR) = BQ doanh số/tháng gần đây. %T8/RR = SO tháng 8 ÷ run-rate (tiến độ tháng). Donut = phần đóng góp vào mức tăng (ΔYTD) của các ngành dương, màu theo mức tăng trưởng (tím ≥25% · xanh ≥10% · vàng ≥0% · đỏ &lt;0%). Số cập nhật mỗi ngày.</div>';
   grDrawChart(GD().npp);
+  if(isAll) grDrawDonut();
   grPaintTree();
+  grPaintWeak();
+}
+function grTierCol(gr){return gr>=0.25?'#a78bfa':gr>=0.10?'#34d399':gr>=0?'#fbbf24':'#f87171';}
+window.grDonutC=null;
+function grDrawDonut(){
+  const cv=document.getElementById('grDonut'); if(!cv||typeof Chart==='undefined')return;
+  if(grDonutC){grDonutC.destroy();grDonutC=null;}
+  const bc=DB.growthytd.byCat, cats=(DB.growthytd.cats||[]).filter(c=>c!=='Toàn ngành');
+  const arr=cats.map(c=>{const t=bc[c].tot;return {c,contrib:t.ytd-t.ly,gr:t.gr};});
+  const pos=arr.filter(x=>x.contrib>0).sort((a,b)=>b.contrib-a.contrib);
+  const neg=arr.filter(x=>x.contrib<=0).sort((a,b)=>a.contrib-b.contrib);
+  const net=arr.reduce((s,x)=>s+x.contrib,0), sumpos=pos.reduce((s,x)=>s+x.contrib,0)||1;
+  grDonutC=new Chart(cv.getContext('2d'),{type:'doughnut',
+    data:{labels:pos.map(x=>x.c),datasets:[{data:pos.map(x=>+(x.contrib/1e9).toFixed(2)),
+      backgroundColor:pos.map(x=>grTierCol(x.gr)),borderColor:'#22345c',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'right',labels:{color:'#c7d3e6',font:{size:11},boxWidth:12,padding:8}},
+        tooltip:{callbacks:{label:c=>c.label+': +'+(+c.parsed).toFixed(1)+' tỷ · '+((+c.parsed)/(sumpos/1e9)*100).toFixed(0)+'% mức tăng'}}}},
+    plugins:[{id:'grDonutCtr',afterDraw(ch){const a=ch.chartArea;const x=(a.left+a.right)/2,y=(a.top+a.bottom)/2;const ctx=ch.ctx;
+      ctx.save();ctx.textAlign='center';ctx.fillStyle='#eaf1ff';ctx.font='bold 19px Arial';ctx.fillText('+'+(net/1e9).toFixed(1)+' tỷ',x,y-2);
+      ctx.fillStyle='#34d399';ctx.font='bold 13px Arial';ctx.fillText(grPctS(bc['Toàn ngành'].tot.gr)+' YoY',x,y+18);ctx.restore();}}]});
+  const nn=document.getElementById('grDonutNote');
+  if(nn) nn.innerHTML=(neg.length?'Kéo giảm: '+neg.map(x=>`<b style="color:#f87171">${x.c} ${grTy(x.contrib)} tỷ</b>`).join(' · '):'Tất cả ngành đều đóng góp dương 🎉')
+    +'<br><span style="opacity:.75">Màu theo mức tăng trưởng: <span style="color:#a78bfa">■</span>≥25% <span style="color:#34d399">■</span>≥10% <span style="color:#fbbf24">■</span>≥0% <span style="color:#f87171">■</span>&lt;0%</span>';
+}
+function grPaintWeak(){
+  const el=document.getElementById('grWeak'); if(!el)return;
+  const rows=GD().rows.filter(r=>r.ly>=1e8).map(r=>({w:r.ward,ss:r.ss,npp:r.npp,kv:r.kv,ytd:r.ytd,ly:r.ly,gr:(r.ytd-r.ly)/r.ly,delta:r.ytd-r.ly}))
+    .filter(r=>r.delta<0).sort((a,b)=>a.delta-b.delta).slice(0,20);
+  if(!rows.length){el.innerHTML='<div class="gr-foot" style="padding:10px 4px">Không có phường/xã tăng trưởng âm ở ngành này 🎉</div>';return;}
+  const b=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.w}</td><td>${r.ss}</td><td>${r.npp.replace('NPP ','')}</td><td>${r.kv}</td><td>${grTy(r.ytd)}</td><td style="color:#9fb4dc">${grTy(r.ly)}</td><td style="color:#f87171;font-weight:800">${grPctS(r.gr)}</td><td style="color:#f87171;font-weight:700">${grTy(r.delta)}</td></tr>`).join('');
+  el.innerHTML=`<div class="gr-wrap"><table class="gr-tb gr-weak"><thead><tr><th>#</th><th>Phường/xã</th><th>SS</th><th>NPP</th><th>Tỉnh</th><th>SO YTD</th><th>SO YTD LY</th><th>%Tăng trưởng</th><th>Δ tỷ</th></tr></thead><tbody>${b}</tbody></table></div>`;
 }
 window.grToggle=(k)=>{if(grOpen.has(k))grOpen.delete(k);else grOpen.add(k);grPaintTree();};
 function grHdrTds(){return '<th>SO tháng 8</th><th>SO YTD</th><th>SO YTD LY</th><th>% Tăng trưởng</th><th>RR 3T</th><th>RR 6T</th><th>%T8/RR3M</th><th>%T8/RR6M</th>';}
@@ -2373,6 +2421,8 @@ function fundRender(){
     ${note}
     <h4 class="fu-sec">📦 Bảng SO theo ngành hàng — NPP → SS → ĐDKD <span class=kq-mut style="font-weight:400">(đơn vị: tỷ đồng · RATE = trung bình Tháng 5·6·7 · %T8 vs RATE &amp; vs T7 · bấm ▸ để sổ xuống · toàn vùng ASM)</span></h4>
     <div id="fuShApp"></div>
+    <h4 class="fu-sec">🚨 Nhóm ĐDKD CẦN CHÚ Ý — SO / độ phủ / LPPC / ngành hàng tụt giảm <span class=kq-mut style="font-weight:400">(bấm ▸ khoan NPP → SS → ĐDKD · xếp cảnh báo nhiều→ít · so tháng 8 với run-rate T5·6·7)</span></h4>
+    <div id="fuDcApp"></div>
     <div class="fu-foot">• SO = Doanh số trước chiết khấu. Tháng 5·6·7 là số đủ tháng; MTD T8 đến ${F.datadate}.<br>
     • LPPC = dòng SP / PC · PC bình quân = PC / (số ngày làm việc × số ĐDKD) → lượt viếng thăm bình quân 1 ĐDKD/ngày. Chỉ kênh OFF, trừ ngành P.Meat & Bia.<br>
     • %đạt ASO = quầy có phát sinh mua trong tháng / MCP của kênh đó. Cột cuối: quầy 3 tháng 5·6·7 chưa mua, sang T8 đã mua lại bao nhiêu.<br>
@@ -2399,7 +2449,73 @@ function fundRender(){
   const _fc=document.getElementById('fuFindClear'); if(_fc)_fc.onclick=()=>{fuFind='';fundRender();};
   fuMountFocus(document.getElementById('fuApp'));
   fuRenderSoHang();
+  fuRenderDecline();
   fuDrawChart(R,M);
+}
+// ===== Nhóm ĐDKD cần chú ý (SO/độ phủ/LPPC/ngành hàng tụt giảm) — NPP→SS→ĐDKD =====
+window.fuDcOpen={};
+window.fuDcTog=(k)=>{fuDcOpen[k]=!fuDcOpen[k];fuRenderDecline();};
+let _fuDcData=null;
+function fuDcBuild(){
+  if(_fuDcData) return _fuDcData;
+  const mz=()=>[0,1,2,3].map(()=>({so:0,a:0,pc:0,ln:0}));
+  const acc=(nd,l)=>{nd.mcp+=l.mcpOff||0;for(let i=0;i<4;i++){nd.m[i].so+=l.m[i].so;nd.m[i].a+=l.m[i].actOff;nd.m[i].pc+=l.m[i].pc;nd.m[i].ln+=l.m[i].lines;}};
+  const T={};
+  (function walk(node,npp,ss){
+    if(node.lvl===2)npp=node.name; if(node.lvl===3)ss=node.name;
+    if(node.lvl===4){const l={mcpOff:node.mcpOff,m:node.m};
+      const n=T[npp]||(T[npp]={name:npp,mcp:0,m:mz(),ss:{}}); acc(n,l);
+      const s=n.ss[ss]||(n.ss[ss]={name:ss,mcp:0,m:mz(),kd:{}}); acc(s,l);
+      const k=s.kd[node.name]||(s.kd[node.name]={name:node.name,mcp:0,m:mz()}); acc(k,l);
+      return;}
+    (node.children||[]).forEach(c=>walk(c,npp,ss));
+  })(DB.fundamental.root,null,null);
+  const catNP={},catSS={},catKD={}, add=(st,key,cat,m)=>{(st[key]||(st[key]={}))[cat]=m;};
+  (DB.fundamental.sohang?DB.fundamental.sohang.nodes:[]).forEach(cn=>cn.npps.forEach(np=>{
+    add(catNP,np.name,cn.cat,np.m);
+    np.sss.forEach(s=>{add(catSS,np.name+'|'+s.name,cn.cat,s.m);
+      s.kds.forEach(k=>add(catKD,np.name+'|'+s.name+'|'+k.name,cn.cat,k.m));});
+  }));
+  _fuDcData={T,catNP,catSS,catKD}; return _fuDcData;
+}
+function fuDcMetr(nd){
+  const m=nd.m, rate=(m[0].so+m[1].so+m[2].so)/3, t8=m[3].so;
+  const cov=i=>nd.mcp?m[i].a/nd.mcp:0, lppc=i=>m[i].pc?m[i].ln/m[i].pc:0;
+  return {rate,t8,vsRR:rate?t8/rate:0,dso:t8-rate,dcov:cov(3)-cov(2),dlppc:lppc(3)-lppc(2)};
+}
+function fuDcCatDrop(map,key){const o=map[key];if(!o)return[0,0];let tot=0,drop=0;
+  for(const c in o){tot++;const m=o[c],r=(m[0]+m[1]+m[2])/3;if(r>0&&m[3]<r*0.9)drop++;}return[drop,tot];}
+function fuDcFlags(mt,cd){
+  const soBad=mt.vsRR>0&&mt.vsRR<0.9, covBad=mt.dcov< -0.005, lppcBad=mt.dlppc< -0.02, catBad=cd[1]>0&&cd[0]/cd[1]>=0.5;
+  return {f:[soBad,covBad,lppcBad,catBad].filter(Boolean).length,soBad,covBad,lppcBad,catBad};
+}
+function fuRenderDecline(){
+  const app=document.getElementById('fuDcApp'); if(!app)return;
+  const D=fuDcBuild(), rd='#f87171', ok='#7fd7a8';
+  const ty=v=>(v/1e9).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const cell=(mt,cd,fl)=>
+    `<td style="color:${fl.soBad?rd:'#dbe6ff'};font-weight:800">${(mt.vsRR*100).toFixed(0)}%<div style="font-size:10px;font-weight:600;color:${mt.dso<0?rd:'#88a'}">${mt.dso>=0?'+':''}${ty(mt.dso)} tỷ</div></td>`
+    +`<td style="color:${mt.dcov<0?rd:ok};font-weight:700">${(mt.dcov*100>=0?'+':'')+(mt.dcov*100).toFixed(1)}đ%</td>`
+    +`<td style="color:${mt.dlppc<0?rd:ok};font-weight:700">${(mt.dlppc>=0?'+':'')+mt.dlppc.toFixed(2)}</td>`
+    +`<td style="color:${fl.catBad?rd:'#9fb4d8'};font-weight:700">${cd[0]}/${cd[1]}</td>`
+    +`<td>${fl.f?'<span style="background:#7c2d2d;color:#ffd7d7;border-radius:6px;padding:1px 7px;font-weight:800">⚠ '+fl.f+'</span>':'<span style="color:#5ea">✓</span>'}</td>`;
+  const srt=a=>a.sort((x,y)=>y.fl.f-x.fl.f||x.mt.dso-y.mt.dso);
+  const npps=srt(Object.values(D.T).map(n=>{const mt=fuDcMetr(n),cd=fuDcCatDrop(D.catNP,n.name);return {n,mt,cd,fl:fuDcFlags(mt,cd)};}));
+  let rows='';
+  npps.forEach((N,ni)=>{const nk='d'+ni, op=fuDcOpen[nk];
+    rows+=`<tr class="sh-npp" onclick="fuDcTog('${nk}')"><td><span class="sh-arw">${op?'▾':'▸'}</span>${N.n.name}</td>${cell(N.mt,N.cd,N.fl)}</tr>`;
+    if(!op)return;
+    const sss=srt(Object.values(N.n.ss).map(s=>{const mt=fuDcMetr(s),cd=fuDcCatDrop(D.catSS,N.n.name+'|'+s.name);return {s,mt,cd,fl:fuDcFlags(mt,cd)};}));
+    sss.forEach((S,si)=>{const sk=nk+'_'+si, so=fuDcOpen[sk];
+      rows+=`<tr class="sh-ss" onclick="fuDcTog('${sk}')"><td style="padding-left:22px"><span class="sh-arw">${so?'▾':'▸'}</span>${S.s.name}</td>${cell(S.mt,S.cd,S.fl)}</tr>`;
+      if(!so)return;
+      const kds=srt(Object.values(S.s.kd).map(k=>{const mt=fuDcMetr(k),cd=fuDcCatDrop(D.catKD,N.n.name+'|'+S.s.name+'|'+k.name);return {k,mt,cd,fl:fuDcFlags(mt,cd)};}));
+      kds.forEach(K=>{rows+=`<tr class="sh-kd${K.fl.f>=2?' fu-dcbad':''}"><td style="padding-left:42px"><span style="display:inline-block;width:14px"></span>${K.k.name}</td>${cell(K.mt,K.cd,K.fl)}</tr>`;});
+    });
+  });
+  app.innerHTML=`<div class="fu-wrap"><table class="fu-sh fu-dc"><thead>
+    <tr><th>NPP / SS / ĐDKD</th><th>SO vs RR (T8)</th><th>Δ Độ phủ OFF</th><th>Δ LPPC</th><th>Ngành tụt</th><th>Cảnh báo</th></tr>
+    </thead><tbody>${rows}</tbody></table></div>`;
 }
 // ===== Chế độ tập trung (mở rộng màn hình) cho mỗi tiêu đề Fundamental =====
 window.fuFocusOn=null;
